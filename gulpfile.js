@@ -1,5 +1,5 @@
 const gulp = require("gulp");
-
+const through = require("through2");
 const qiniu = require("qiniu");
 //需要填写你的 Access Key 和 Secret Key
 qiniu.conf.ACCESS_KEY = "JWxWzs97EbiOAmJgQ-rNwCCDAjRXj1Oc-vPAJbcH";
@@ -15,8 +15,8 @@ const keyPathConfig = {
 };
 
 // 生成token
-function uptoken(bucket, key) {
-  var putPolicy = new qiniu.rs.PutPolicy(bucket + ":" + key);
+function uptoken(bucket) {
+  var putPolicy = new qiniu.rs.PutPolicy(bucket);
   return putPolicy.token();
 }
 
@@ -34,17 +34,18 @@ function uploadFile(uptoken, key, localFile) {
   });
 }
 
-function upload(key, file) {
-  var token = uptoken(bucket, key);
-  uploadFile(token, key, file);
-}
-
 gulp.task("uploadOne", function() {
-  gulp
-    .src("./hangzhoudaduhuixiandaijiajuguan/10347.fmap", { buffer: true })
-    .on("data", function(file) {
-      upload("fmap/hangzhoudaduhuixiandaijiajuguan/0.3/", file.contents);
-    });
+  gulp.src("./hangzhoudaduhuixiandaijiajuguan/**/*.*").pipe(
+    through.obj(function(file, enc, cb) {
+      var token = uptoken(bucket);
+      uploadFile(
+        token,
+        "./hangzhoudaduhuixiandaijiajuguan/0.3/" + file.relative,
+        file.path
+      );
+      cb();
+    })
+  );
 });
 
 gulp.task("default", ["uploadOne"]);
